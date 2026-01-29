@@ -127,37 +127,48 @@ const AddFrameDialog = ({ open, onOpenChange }: AddFrameDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">
-            Cadastrar Nova Armação
+      <DialogContent className="sm:max-w-md border-0 shadow-2xl">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="font-display text-xl font-normal tracking-wide">
+            Nova Referência
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div className="space-y-2">
-            <Label htmlFor="reference">Código de Referência</Label>
+            <Label 
+              htmlFor="reference" 
+              className="text-xs uppercase tracking-luxury text-muted-foreground"
+            >
+              Código de Referência
+            </Label>
             <Input
               id="reference"
               value={referenceCode}
               onChange={(e) => setReferenceCode(e.target.value)}
-              placeholder="Ex: BK-2024-001"
+              placeholder="BK-2024-001"
               disabled={isLoading}
+              className="border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-foreground transition-colors"
             />
           </div>
 
           <div className="space-y-3">
-            <Label>Categoria</Label>
+            <Label className="text-xs uppercase tracking-luxury text-muted-foreground">
+              Categoria
+            </Label>
             <RadioGroup
               value={category}
               onValueChange={setCategory}
-              className="flex gap-4"
+              className="flex gap-6"
               disabled={isLoading}
             >
               {categories.map((cat) => (
                 <div key={cat} className="flex items-center space-x-2">
-                  <RadioGroupItem value={cat} id={cat} />
-                  <Label htmlFor={cat} className="font-normal cursor-pointer">
+                  <RadioGroupItem value={cat} id={cat} className="border-muted-foreground" />
+                  <Label 
+                    htmlFor={cat} 
+                    className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     {cat}
                   </Label>
                 </div>
@@ -165,21 +176,24 @@ const AddFrameDialog = ({ open, onOpenChange }: AddFrameDialogProps) => {
             </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Foto da Armação</Label>
+          <div className="space-y-3">
+            <Label className="text-xs uppercase tracking-luxury text-muted-foreground">
+              Imagem
+            </Label>
             <div className="relative">
               {preview ? (
-                <div className="relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted">
+                <div className="relative aspect-[4/3] overflow-hidden bg-secondary/50">
                   <img
                     src={preview}
                     alt="Preview"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain p-4"
+                    style={{ mixBlendMode: "multiply" }}
                   />
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
-                    className="absolute bottom-2 right-2"
+                    className="absolute bottom-3 right-3 text-xs uppercase tracking-wider"
                     onClick={() => {
                       setFile(null);
                       setPreview(null);
@@ -190,9 +204,9 @@ const AddFrameDialog = ({ open, onOpenChange }: AddFrameDialogProps) => {
                   </Button>
                 </div>
               ) : (
-                <label className="flex aspect-[4/3] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 transition-colors hover:border-muted-foreground/50 hover:bg-muted">
-                  <Upload className="mb-2 h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                <label className="flex aspect-[4/3] cursor-pointer flex-col items-center justify-center bg-secondary/30 transition-colors hover:bg-secondary/50">
+                  <Upload className="mb-3 h-6 w-6 text-muted-foreground/50" />
+                  <span className="text-xs uppercase tracking-luxury text-muted-foreground">
                     Clique para selecionar
                   </span>
                   <input
@@ -207,21 +221,25 @@ const AddFrameDialog = ({ open, onOpenChange }: AddFrameDialogProps) => {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-4 pt-4">
             <Button
               type="button"
-              variant="outline"
-              className="flex-1"
+              variant="ghost"
+              className="flex-1 text-xs uppercase tracking-wider font-normal"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="flex-1 text-xs uppercase tracking-wider font-normal" 
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Salvando
                 </>
               ) : (
                 "Cadastrar"
