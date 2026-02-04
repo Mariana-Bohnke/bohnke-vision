@@ -1,255 +1,121 @@
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Upload, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/lib/supabase";
+import { Loader2, Upload } from "lucide-react";
+
+const MENU_STRUCTURE: Record<string, string[]> = {
+  "Bohnke": ["Acetato", "Resistentes", "Metal", "Clippon", "Solar"],
+  "Swiss": ["Acetato", "Metal", "Clippon", "Solar"],
+  "Davisory": ["Parafuso Prata", "Parafuso Dourada", "Buchas Prata", "Buchas Douradas"]
+};
 
 interface AddFrameDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const categories = ["Swiss", "Davisory", "Bohnke"] as const;
-
-const AddFrameDialog = ({ open, onOpenChange }: AddFrameDialogProps) => {
-  const [referenceCode, setReferenceCode] = useState("");
-  const [category, setCategory] = useState<string>("Swiss");
+export default function AddFrameDialog({ open, onOpenChange }: AddFrameDialogProps) {
+  const [loading, setLoading] = useState(false);
+  const [reference, setReference] = useState("");
+  const [quantity, setQuantity] = useState("1"); // Começa com 1 peça
+  const [category, setCategory] = useState<string>("Bohnke");
+  const [subcategory, setSubcategory] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSubcategory(MENU_STRUCTURE[category]?.[0] || "");
+  }, [category]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
       setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
     }
-  };
-
-  const resetForm = () => {
-    setReferenceCode("");
-    setCategory("Swiss");
-    setFile(null);
-    setPreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!referenceCode.trim()) {
-      toast({
-        title: "Erro",
-        description: "O código de referência é obrigatório.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!file) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma imagem da armação.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
+    if (!file || !reference) return alert("Preencha referência e foto!");
+    setLoading(true);
 
     try {
-      // Upload image to storage
-      const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
-      const filePath = `${category}/${referenceCode}-${timestamp}.${fileExt}`;
+      const fileName = `${category}/${reference.replace(/\s+/g, '-')}-${Date.now()}.${fileExt}`;
       
-      const { error: uploadError } = await supabase.storage
-        .from("frame-images")
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('frame-images').upload(fileName, file);
+      if (uploadError) throw uploadError;
 
-      if (uploadError) {
-        throw new Error("Erro ao salvar imagem: " + uploadError.message);
-      }
+      const { data: { publicUrl } } = supabase.storage.from('frame-images').getPublicUrl(fileName);
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("frame-images")
-        .getPublicUrl(filePath);
-
-      // Insert frame record
-      const { error: insertError } = await supabase
-        .from("frames")
-        .insert({
-          reference_code: referenceCode.trim(),
+      const { error: dbError } = await supabase.from('frames').insert({
+          reference_code: reference,
           category,
+          subcategory,
           image_url: publicUrl,
+          quantity: parseInt(quantity) || 1 // Salva a quantidade
         });
 
-      if (insertError) {
-        // If insert fails, try to delete the uploaded image
-        await supabase.storage.from("frame-images").remove([filePath]);
-        
-        if (insertError.code === "23505") {
-          throw new Error("Este código já está cadastrado.");
-        }
-        throw new Error("Erro ao cadastrar armação: " + insertError.message);
-      }
+      if (dbError) throw dbError;
 
-      toast({
-        title: "Sucesso!",
-        description: `Armação ${referenceCode} cadastrada com sucesso.`,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["frames"] });
-      resetForm();
+      alert("Cadastrado com sucesso!");
       onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
-        variant: "destructive",
-      });
+      window.location.reload();
+
+    } catch (error: any) {
+      alert("Erro: " + error.message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md border-0 shadow-2xl">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="font-display text-xl font-normal tracking-wide">
-            Nova Referência
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[425px] bg-white p-0 overflow-hidden border-none shadow-2xl">
+        <div className="bg-black p-6 text-center">
+          <DialogTitle className="text-white font-serif text-xl tracking-widest uppercase">Novo Item</DialogTitle>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-2">
-            <Label 
-              htmlFor="reference" 
-              className="text-xs uppercase tracking-luxury text-muted-foreground"
-            >
-              Código de Referência
-            </Label>
-            <Input
-              id="reference"
-              value={referenceCode}
-              onChange={(e) => setReferenceCode(e.target.value)}
-              placeholder="BK-2024-001"
-              disabled={isLoading}
-              className="border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-foreground transition-colors"
-            />
+        <form onSubmit={handleSubmit} className="p-8 space-y-4">
+          <div className="flex justify-center mb-4">
+            <label className="relative w-full h-40 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-black transition-colors bg-gray-50">
+              {previewUrl ? <img src={previewUrl} className="h-full w-full object-contain p-2" /> : <Upload className="h-8 w-8 text-gray-300" />}
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            </label>
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-xs uppercase tracking-luxury text-muted-foreground">
-              Categoria
-            </Label>
-            <RadioGroup
-              value={category}
-              onValueChange={setCategory}
-              className="flex gap-6"
-              disabled={isLoading}
-            >
-              {categories.map((cat) => (
-                <div key={cat} className="flex items-center space-x-2">
-                  <RadioGroupItem value={cat} id={cat} className="border-muted-foreground" />
-                  <Label 
-                    htmlFor={cat} 
-                    className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {cat}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-xs uppercase tracking-luxury text-muted-foreground">
-              Imagem
-            </Label>
-            <div className="relative">
-              {preview ? (
-                <div className="relative aspect-[4/3] overflow-hidden bg-secondary/50">
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="h-full w-full object-contain p-4"
-                    style={{ mixBlendMode: "multiply" }}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute bottom-3 right-3 text-xs uppercase tracking-wider"
-                    onClick={() => {
-                      setFile(null);
-                      setPreview(null);
-                    }}
-                    disabled={isLoading}
-                  >
-                    Alterar
-                  </Button>
-                </div>
-              ) : (
-                <label className="flex aspect-[4/3] cursor-pointer flex-col items-center justify-center bg-secondary/30 transition-colors hover:bg-secondary/50">
-                  <Upload className="mb-3 h-6 w-6 text-muted-foreground/50" />
-                  <span className="text-xs uppercase tracking-luxury text-muted-foreground">
-                    Clique para selecionar
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    disabled={isLoading}
-                  />
-                </label>
-              )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 block">Código</label>
+                <input value={reference} onChange={(e) => setReference(e.target.value)} className="w-full border-b py-2 font-serif uppercase focus:outline-none focus:border-black" placeholder="EX: BK-001"/>
+            </div>
+            <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 block">Qtd. Peças</label>
+                <input type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="w-full border-b py-2 font-serif focus:outline-none focus:border-black"/>
             </div>
           </div>
 
-          <div className="flex gap-4 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex-1 text-xs uppercase tracking-wider font-normal"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              className="flex-1 text-xs uppercase tracking-wider font-normal" 
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Salvando
-                </>
-              ) : (
-                "Cadastrar"
-              )}
-            </Button>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 block">Coleção</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-transparent border-b py-2 text-sm font-medium focus:outline-none">
+                {Object.keys(MENU_STRUCTURE).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 block">Tipo</label>
+              <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="w-full bg-transparent border-b py-2 text-sm font-medium focus:outline-none">
+                {MENU_STRUCTURE[category]?.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+              </select>
+            </div>
           </div>
+
+          <button disabled={loading} type="submit" className="w-full bg-black text-white h-12 flex items-center justify-center text-xs font-bold tracking-[2px] uppercase hover:bg-gray-800 transition-colors mt-4">
+            {loading ? <Loader2 className="animate-spin" /> : "SALVAR"}
+          </button>
         </form>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AddFrameDialog;
+}
