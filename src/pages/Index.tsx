@@ -4,7 +4,7 @@ import { useFrames } from "../hooks/useFrames";
 import { Skeleton } from "../components/ui/skeleton";
 import AddFrameDialog from "../components/AddFrameDialog"; 
 import { supabase } from "../lib/supabase";
-import { Plus, Trash2, Ban, SearchX, MessageCircle, Menu, X } from "lucide-react";
+import { Plus, Trash2, Ban, SearchX, MessageCircle, Menu, X, Search } from "lucide-react";
 
 import BannerImage from '../assets/fotocatalogo.jpeg';
 
@@ -13,6 +13,9 @@ const Index = () => {
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
+  
+  // Controle da barra de pesquisa
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Controle do menu no celular
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -43,26 +46,28 @@ const Index = () => {
 
   const openWhatsApp = (e: React.MouseEvent, frame: any) => {
     e.stopPropagation(); 
-    const phone = "5584996386557"; // SEU NÚMERO AQUI
+    const phone = "5584912345678"; // SEU NÚMERO
     const message = `Olá! Gostaria de saber mais informações e valores do modelo *${frame.reference_code}* que vi no catálogo.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  // Lógica de filtro atualizada para incluir a pesquisa
   const filteredFrames = useMemo(() => {
     return frames.filter((frame) => {
-      if (!activeCategory) return true;
+      // Verifica se o texto digitado bate com a referência do óculos
+      const matchesSearch = frame.reference_code.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!activeCategory) return matchesSearch;
       const categoryMatch = frame.category === activeCategory;
-      if (activeSubcategory) return categoryMatch && frame.subcategory === activeSubcategory;
-      return categoryMatch;
+      if (activeSubcategory) return matchesSearch && categoryMatch && frame.subcategory === activeSubcategory;
+      return matchesSearch && categoryMatch;
     });
-  }, [frames, activeCategory, activeSubcategory]);
+  }, [frames, activeCategory, activeSubcategory, searchTerm]);
 
   return (
     <div className="min-h-screen bg-white font-sans flex"> 
       
-      {/* =========================================================
-          BARRA SUPERIOR MOBILE (Só aparece no celular)
-          ========================================================= */}
+      {/* BARRA SUPERIOR MOBILE */}
       <div className="md:hidden fixed top-0 left-0 w-full bg-white z-[60] border-b border-gray-100 px-6 py-4 flex justify-between items-center shadow-sm">
         <span className="font-serif text-xl tracking-widest font-bold">BOHNKE</span>
         <button onClick={() => setIsMobileMenuOpen(true)}>
@@ -70,22 +75,15 @@ const Index = () => {
         </button>
       </div>
 
-      {/* =========================================================
-          SIDEBAR DESKTOP (Escondida no celular, visível no PC)
-          ========================================================= */}
+      {/* SIDEBAR DESKTOP */}
       <div className="hidden md:block">
         <Sidebar onFilterChange={(cat, sub) => { setActiveCategory(cat); setActiveSubcategory(sub); }} />
       </div>
 
-      {/* =========================================================
-          SIDEBAR MOBILE (Gaveta que abre ao clicar no menu)
-          ========================================================= */}
+      {/* SIDEBAR MOBILE */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[70] flex">
-          {/* Fundo escuro */}
           <div className="absolute inset-0 bg-black/60" onClick={() => setIsMobileMenuOpen(false)}></div>
-          
-          {/* Menu Lateral em si */}
           <div className="relative w-[250px] bg-white h-full shadow-2xl">
             <button 
               onClick={() => setIsMobileMenuOpen(false)} 
@@ -104,13 +102,10 @@ const Index = () => {
         </div>
       )}
 
-      {/* =========================================================
-          CONTEÚDO PRINCIPAL
-          ========================================================= */}
-      {/* CORREÇÃO: ml-0 no celular e ml-[250px] no PC para alinhar certinho! */}
+      {/* CONTEÚDO PRINCIPAL */}
       <main className="flex-1 w-full ml-0 md:ml-[250px] mt-[65px] md:mt-0 relative">
         
-        {/* BANNER PRINCIPAL (HERO) */}
+        {/* BANNER PRINCIPAL */}
         {!activeSubcategory && (
           <div className="relative w-full h-[40vh] md:h-[55vh] min-h-[300px] md:min-h-[400px] overflow-hidden group bg-black">
             <img 
@@ -138,13 +133,26 @@ const Index = () => {
         {/* ÁREA DO CATÁLOGO */}
         <div className="p-6 md:p-[80px]">
           
-          <div className="mb-8 md:mb-12 flex justify-between items-end border-b border-gray-100 pb-4 md:pb-6">
+          <div className="mb-8 md:mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-4 md:pb-6 gap-4">
             <div>
               <h2 className="font-serif text-[24px] md:text-[32px] text-black mb-1">
-                {activeSubcategory ? `${activeSubcategory}` : "Shop the trend"}
+                {activeSubcategory ? `${activeSubcategory}` : "Tendências do Momento"}
               </h2>
             </div>
-            <span className="text-[10px] md:text-[12px] text-gray-400 tracking-[1px] uppercase">
+
+            {/* BARRA DE PESQUISA */}
+            <div className="relative w-full md:w-72">
+              <input 
+                type="text" 
+                placeholder="Buscar por referência..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-[12px] border border-gray-200 focus:border-black focus:outline-none rounded-none uppercase tracking-[1px]"
+              />
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+            </div>
+
+            <span className="text-[10px] md:text-[12px] text-gray-400 tracking-[1px] uppercase whitespace-nowrap">
               {isLoading ? "..." : `${filteredFrames.length} Modelos`}
             </span>
           </div>
@@ -163,7 +171,7 @@ const Index = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
-                {filteredFrames.map((frame) => {
+                {filteredFrames.map((frame: any) => {
                   const isSoldOut = frame.quantity === 0;
 
                   return (
@@ -209,9 +217,17 @@ const Index = () => {
                       </div>
 
                       <div className="text-left">
-                        <h3 className="text-[14px] text-black font-medium tracking-wide">
-                          {frame.reference_code}
-                        </h3>
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-[14px] text-black font-medium tracking-wide">
+                            {frame.reference_code}
+                          </h3>
+                          {/* Exibe o gênero do óculos se existir no banco de dados */}
+                          {frame.gender && (
+                            <span className="text-[9px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full uppercase tracking-[1px]">
+                              {frame.gender}
+                            </span>
+                          )}
+                        </div>
                         
                         <p className="text-[11px] text-gray-500 uppercase tracking-[1px] mt-1 mb-4">
                           Sob Consulta

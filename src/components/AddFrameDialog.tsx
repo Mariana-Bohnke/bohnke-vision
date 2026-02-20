@@ -20,6 +20,8 @@ export default function AddFrameDialog({ open, onOpenChange }: AddFrameDialogPro
   const [quantity, setQuantity] = useState("1"); // Começa com 1 peça
   const [category, setCategory] = useState<string>("Bohnke");
   const [subcategory, setSubcategory] = useState<string>("");
+  // ⚠️ NOVO: Estado para guardar o gênero selecionado
+  const [gender, setGender] = useState<string>("Feminino"); 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -54,7 +56,8 @@ export default function AddFrameDialog({ open, onOpenChange }: AddFrameDialogPro
           category,
           subcategory,
           image_url: publicUrl,
-          quantity: parseInt(quantity) || 1 // Salva a quantidade
+          quantity: parseInt(quantity) || 1,
+          gender: gender // ⚠️ NOVO: Enviando o gênero para o banco de dados
         });
 
       if (dbError) throw dbError;
@@ -109,6 +112,16 @@ export default function AddFrameDialog({ open, onOpenChange }: AddFrameDialogPro
                 {MENU_STRUCTURE[category]?.map(sub => <option key={sub} value={sub}>{sub}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* ⚠️ NOVO: Campo de Gênero */}
+          <div>
+            <label className="text-[10px] uppercase font-bold text-gray-400 block">Gênero</label>
+            <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full bg-transparent border-b py-2 text-sm font-medium focus:outline-none">
+              <option value="Feminino">Feminino</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Unissex">Unissex</option>
+            </select>
           </div>
 
           <button disabled={loading} type="submit" className="w-full bg-black text-white h-12 flex items-center justify-center text-xs font-bold tracking-[2px] uppercase hover:bg-gray-800 transition-colors mt-4">

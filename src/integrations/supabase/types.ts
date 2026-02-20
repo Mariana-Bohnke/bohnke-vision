@@ -18,6 +18,7 @@ export interface Database {
           category: string
           subcategory: string | null
           quantity: number
+          gender: string | null // <-- Adicionado aqui (Leitura)
         }
         Insert: {
           id?: string
@@ -27,6 +28,7 @@ export interface Database {
           category: string
           subcategory?: string | null
           quantity?: number
+          gender?: string | null // <-- Adicionado aqui (Criação)
         }
         Update: {
           id?: string
@@ -36,6 +38,7 @@ export interface Database {
           category?: string
           subcategory?: string | null
           quantity?: number
+          gender?: string | null // <-- Adicionado aqui (Edição)
         }
         Relationships: []
       }
@@ -53,4 +56,13 @@ export interface Database {
       [_ in never]: never
     }
   }
+}export interface Frame {
+  id: string;
+  created_at: string;
+  reference_code: string;
+  image_url: string;
+  category: string;
+  subcategory: string | null;
+  quantity: number;
+  gender?: string | null; 
 }
