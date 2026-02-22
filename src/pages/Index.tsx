@@ -14,8 +14,9 @@ const Index = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [session, setSession] = useState<any>(null);
   
-  // Controle da barra de pesquisa
+  // Controle da barra de pesquisa e do novo filtro de gênero
   const [searchTerm, setSearchTerm] = useState("");
+  const [genderFilter, setGenderFilter] = useState("Todos"); // ⚠️ NOVO: Memória do filtro
   
   // Controle do menu no celular
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -51,18 +52,23 @@ const Index = () => {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // Lógica de filtro atualizada para incluir a pesquisa
+  // ⚠️ Lógica de filtro super inteligente atualizada para incluir o Gênero
   const filteredFrames = useMemo(() => {
-    return frames.filter((frame) => {
-      // Verifica se o texto digitado bate com a referência do óculos
+    return frames.filter((frame: any) => {
+      // 1. Verifica se o texto digitado bate com a referência do óculos
       const matchesSearch = frame.reference_code.toLowerCase().includes(searchTerm.toLowerCase());
       
-      if (!activeCategory) return matchesSearch;
+      // 2. Verifica se bate com o gênero selecionado (Se for "Todos", passa direto)
+      const matchesGender = genderFilter === "Todos" || frame.gender === genderFilter;
+      
+      if (!activeCategory) return matchesSearch && matchesGender;
+      
       const categoryMatch = frame.category === activeCategory;
-      if (activeSubcategory) return matchesSearch && categoryMatch && frame.subcategory === activeSubcategory;
-      return matchesSearch && categoryMatch;
+      if (activeSubcategory) return matchesSearch && matchesGender && categoryMatch && frame.subcategory === activeSubcategory;
+      
+      return matchesSearch && matchesGender && categoryMatch;
     });
-  }, [frames, activeCategory, activeSubcategory, searchTerm]);
+  }, [frames, activeCategory, activeSubcategory, searchTerm, genderFilter]);
 
   return (
     <div className="min-h-screen bg-white font-sans flex"> 
@@ -133,28 +139,50 @@ const Index = () => {
         {/* ÁREA DO CATÁLOGO */}
         <div className="p-6 md:p-[80px]">
           
-          <div className="mb-8 md:mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-gray-100 pb-4 md:pb-6 gap-4">
+          <div className="mb-8 md:mb-12 flex flex-col xl:flex-row justify-between items-start xl:items-end border-b border-gray-100 pb-4 md:pb-6 gap-6">
             <div>
               <h2 className="font-serif text-[24px] md:text-[32px] text-black mb-1">
                 {activeSubcategory ? `${activeSubcategory}` : "Tendências do Momento"}
               </h2>
             </div>
 
-            {/* BARRA DE PESQUISA */}
-            <div className="relative w-full md:w-72">
-              <input 
-                type="text" 
-                placeholder="Buscar por referência..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-[12px] border border-gray-200 focus:border-black focus:outline-none rounded-none uppercase tracking-[1px]"
-              />
-              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            </div>
+            {/* ⚠️ NOVA ÁREA DE PESQUISA E FILTROS */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-center">
+              
+              {/* Pesquisa por Referência */}
+              <div className="relative w-full sm:w-64">
+                <input 
+                  type="text" 
+                  placeholder="Buscar por referência..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-[12px] border border-gray-200 focus:border-black focus:outline-none rounded-none uppercase tracking-[1px]"
+                />
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+              </div>
 
-            <span className="text-[10px] md:text-[12px] text-gray-400 tracking-[1px] uppercase whitespace-nowrap">
-              {isLoading ? "..." : `${filteredFrames.length} Modelos`}
-            </span>
+              {/* Filtro de Gênero */}
+              <div className="relative w-full sm:w-44">
+                <select 
+                  value={genderFilter}
+                  onChange={(e) => setGenderFilter(e.target.value)}
+                  className="w-full px-4 py-2 text-[12px] border border-gray-200 focus:border-black focus:outline-none rounded-none uppercase tracking-[1px] bg-white appearance-none cursor-pointer"
+                >
+                  <option value="Todos">TODOS</option>
+                  <option value="Feminino">FEMININO</option>
+                  <option value="Masculino">MASCULINO</option>
+                  <option value="Unissex">UNISSEX</option>
+                </select>
+                {/* Ícone de setinha personalizado */}
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+              </div>
+
+              <span className="text-[10px] md:text-[12px] text-gray-400 tracking-[1px] uppercase whitespace-nowrap ml-1">
+                {isLoading ? "..." : `${filteredFrames.length} Modelos`}
+              </span>
+            </div>
           </div>
 
           {isLoading ? (
