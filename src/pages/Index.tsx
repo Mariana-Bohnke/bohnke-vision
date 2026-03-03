@@ -47,7 +47,7 @@ const Index = () => {
 
   const openWhatsApp = (e: React.MouseEvent, frame: any) => {
     e.stopPropagation(); 
-    const phone = "5584912345678"; // SEU NÚMERO
+    const phone = "5584996386557"; // SEU NÚMERO
     const message = `Olá! Gostaria de saber mais informações e valores do modelo *${frame.reference_code}* que vi no catálogo.`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
